@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SentimentAI | Amazon Alexa Review Analytics</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    .glass-card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(229, 231, 235, 0.8);
+    }
+
+    .gradient-hero {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f766e 100%);
+    }
+  </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+
+  <!-- Navbar -->
+  <nav class="sticky top-0 z-50 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 text-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-400 to-teal-500 flex items-center justify-center text-slate-950 font-extrabold text-xl shadow-lg shadow-teal-500/20">
+          <i class="fa-solid fa-chart-pie"></i>
+        </div>
+        <div>
+          <span class="font-bold text-lg tracking-tight text-white">Sentiment<span class="text-teal-400">AI</span></span>
+          <span class="hidden sm:inline-block ml-2 text-xs text-slate-400 font-medium px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700">Alexa Review Engine</span>
+        </div>
+      </div>
+      <div class="flex items-center space-x-3">
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 mr-2 animate-ping"></span>
+          XGBoost Model Online
+        </span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Banner -->
+  <header class="gradient-hero text-white py-12 px-4 relative overflow-hidden">
+    <div class="absolute inset-0 opacity-10 bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none"></div>
+    <div class="max-w-4xl mx-auto text-center relative z-10">
+      <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/30 text-teal-300 text-xs font-semibold mb-4">
+        <i class="fa-solid fa-brain"></i> Powered by NLTK & Machine Learning
+      </div>
+      <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight mb-4">
+        Understand Customer Sentiment in Seconds
+      </h1>
+      <p class="text-slate-300 text-base sm:text-lg max-w-2xl mx-auto">
+        Analyze individual product reviews or batch-process CSV and TSV datasets with confidence metrics, interactive tables, and donut chart distributions.
+      </p>
+
+      <!-- Navigation Tabs -->
+      <div class="mt-8 flex justify-center">
+        <div class="inline-flex p-1.5 rounded-2xl bg-slate-800/80 backdrop-blur border border-slate-700/60 shadow-xl">
+          <button id="tabSingleBtn" onclick="switchTab('single')" class="flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-sm transition-all bg-teal-500 text-slate-950 shadow-md">
+            <i class="fa-solid fa-comment-dots"></i>
+            Single Review
+          </button>
+          <button id="tabBulkBtn" onclick="switchTab('bulk')" class="flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-sm transition-all text-slate-300 hover:text-white">
+            <i class="fa-solid fa-file-lines"></i>
+            Bulk CSV / TSV Analysis
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+
+    <!-- TAB 1: SINGLE REVIEW -->
+    <section id="singleTabSection" class="transition-all duration-300">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        <!-- Input Column -->
+        <div class="lg:col-span-6 bg-white rounded-3xl p-6 sm:p-8 shadow-xl shadow-slate-200/60 border border-slate-200/80">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-pen-to-square text-teal-600"></i>
+              Input Review
+            </h2>
+            <button onclick="clearSingleInput()" class="text-xs font-semibold text-slate-400 hover:text-slate-600 transition flex items-center gap-1">
+              <i class="fa-solid fa-rotate-left"></i> Reset
+            </button>
+          </div>
+
+          <!-- Quick Sample Review Chips -->
+          <div class="mb-4">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-2">Try Sample Reviews:</span>
+            <div class="flex flex-wrap gap-2">
+              <button onclick="fillSample('Love my Echo! The sound quality is crystal clear and setup took under two minutes.')"
+                class="text-xs px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-medium border border-emerald-200 transition text-left">
+                👍 "Love my Echo! Sound is crystal clear..."
+              </button>
+              <button onclick="fillSample('This item did not work at all. It crashed constantly, disconnects from WiFi and would not reboot.')"
+                class="text-xs px-3 py-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 font-medium border border-rose-200 transition text-left">
+                👎 "This item did not work at all..."
+              </button>
+              <button onclick="fillSample('Sometimes Alexa answers correctly, but it frequently fails to hear commands across the room.')"
+                class="text-xs px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 font-medium border border-amber-200 transition text-left">
+                🤔 "Sometimes Alexa answers correctly, but..."
+              </button>
+            </div>
+          </div>
+
+          <!-- Text Input Area -->
+          <div class="relative">
+            <textarea id="singleReviewText" rows="6"
+              placeholder="Type or paste an Amazon Alexa customer review here..."
+              class="w-full p-4 rounded-2xl border border-slate-300 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/20 text-slate-800 placeholder-slate-400 text-sm sm:text-base resize-none transition outline-none"></textarea>
+            <div class="flex justify-between items-center text-xs text-slate-400 mt-2 px-1">
+              <span>English language input</span>
+              <span id="charCount">0 characters</span>
+            </div>
+          </div>
+
+          <!-- Analyze Button -->
+          <button id="singleAnalyzeBtn" onclick="analyzeSingleReview()"
+            class="mt-5 w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-bold text-base shadow-lg shadow-teal-600/30 transition flex items-center justify-center gap-2">
+            <span id="singleBtnText"><i class="fa-solid fa-wand-magic-sparkles"></i> Predict Sentiment</span>
+            <span id="singleBtnSpinner" class="hidden"><i class="fa-solid fa-circle-notch fa-spin"></i> Processing...</span>
+          </button>
+        </div>
+
+        <!-- Output Column -->
+        <div class="lg:col-span-6 bg-white rounded-3xl p-6 sm:p-8 shadow-xl shadow-slate-200/60 border border-slate-200/80 min-h-[420px] flex flex-col justify-center">
+          
+          <!-- Empty State Placeholder -->
+          <div id="singleEmptyState" class="text-center py-12">
+            <div class="w-16 h-16 rounded-full bg-slate-100 text-slate-300 flex items-center justify-center text-2xl mx-auto mb-4">
+              <i class="fa-solid fa-chart-simple"></i>
+            </div>
+            <h3 class="text-base font-bold text-slate-700">Awaiting Input</h3>
+            <p class="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
+              Enter a review on the left or select a sample review to view the sentiment breakdown and probability confidence.
+            </p>
+          </div>
+
+          <!-- Result Card (Hidden until prediction) -->
+          <div id="singleResultCard" class="hidden space-y-6">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div>
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Model Prediction</span>
+                <h3 class="text-xl font-extrabold text-slate-900 mt-0.5">Sentiment Result</h3>
+              </div>
+              <div id="sentimentBadge" class="px-4 py-2 rounded-2xl font-extrabold text-sm flex items-center gap-2 shadow-sm">
+                <!-- Injected via JS -->
+              </div>
+            </div>
+
+            <!-- Confidence Meter -->
+            <div>
+              <div class="flex justify-between items-center text-sm font-semibold mb-2">
+                <span class="text-slate-600">Prediction Confidence</span>
+                <span id="confidencePercentage" class="text-slate-900 font-extrabold text-lg">--%</span>
+              </div>
+              <div class="w-full h-3.5 bg-slate-100 rounded-full overflow-hidden flex">
+                <div id="probPositiveBar" class="h-full bg-emerald-500 transition-all duration-500" style="width: 50%;"></div>
+                <div id="probNegativeBar" class="h-full bg-rose-500 transition-all duration-500" style="width: 50%;"></div>
+              </div>
+              <div class="flex justify-between text-xs font-medium text-slate-500 mt-2 px-1">
+                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span> Positive: <b id="posScoreText" class="text-slate-800">50%</b></span>
+                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span> Negative: <b id="negScoreText" class="text-slate-800">50%</b></span>
+              </div>
+            </div>
+
+            <!-- NLP Tokens Analysis Box -->
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5 mb-2">
+                <i class="fa-solid fa-code-compare text-teal-600"></i> Processed NLP Tokens (Stemmed)
+              </span>
+              <div id="tokensList" class="flex flex-wrap gap-1.5">
+                <!-- Injected via JS -->
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TAB 2: BULK CSV & TSV ANALYSIS -->
+    <section id="bulkTabSection" class="hidden transition-all duration-300 space-y-8">
+      
+      <!-- Upload Card -->
+      <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-xl shadow-slate-200/60 border border-slate-200/80">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-cloud-arrow-up text-teal-600"></i>
+              Batch Review Dataset Processing (CSV / TSV)
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1">
+              Upload a comma-separated (<code class="bg-slate-100 text-teal-700 px-1 py-0.5 rounded font-mono">.csv</code>) or tab-separated (<code class="bg-slate-100 text-teal-700 px-1 py-0.5 rounded font-mono">.tsv</code>) file. Columns like <code class="bg-slate-100 text-teal-700 px-1.5 py-0.5 rounded font-mono">Sentence</code>, <code class="bg-slate-100 text-teal-700 px-1.5 py-0.5 rounded font-mono">verified_reviews</code>, or <code class="bg-slate-100 text-teal-700 px-1.5 py-0.5 rounded font-mono">review</code> are auto-detected.
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <a href="/sample-csv" download
+              class="px-3.5 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition">
+              <i class="fa-solid fa-file-csv text-teal-600"></i> Sample CSV
+            </a>
+            <a href="/sample-tsv" download
+              class="px-3.5 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition">
+              <i class="fa-solid fa-table text-teal-600"></i> Sample TSV
+            </a>
+            <button onclick="runDemoPrediction()"
+              class="px-3.5 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-semibold flex items-center gap-1.5 transition">
+              <i class="fa-solid fa-bolt text-teal-600"></i> Try Demo Dataset
+            </button>
+          </div>
+        </div>
+
+        <!-- Drag & Drop Zone -->
+        <div id="dropZone"
+          class="border-2 border-dashed border-slate-300 hover:border-teal-500 rounded-3xl p-8 text-center cursor-pointer transition bg-slate-50/50 hover:bg-teal-50/20 group">
+          <input type="file" id="bulkFileInput" accept=".csv, .tsv, .txt" class="hidden" onchange="handleFileSelected(this.files)" />
+          <div class="w-16 h-16 rounded-2xl bg-teal-100 text-teal-600 flex items-center justify-center text-2xl mx-auto mb-3 group-hover:scale-110 transition">
+            <i class="fa-solid fa-file-arrow-up"></i>
+          </div>
+          <p class="text-sm font-bold text-slate-800">
+            Click to upload or drag & drop your <span class="text-teal-600">.CSV</span> or <span class="text-teal-600">.TSV</span> file here
+          </p>
+          <p class="text-xs text-slate-400 mt-1">Supports UTF-8 CSV (comma) and TSV (tab-separated) files</p>
+        </div>
+
+        <!-- Selected File Status Info -->
+        <div id="fileInfoBox" class="hidden mt-4 p-3.5 rounded-2xl bg-teal-50/70 border border-teal-200/80 flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <i id="fileIconDisplay" class="fa-solid fa-file-lines text-teal-600 text-lg"></i>
+            <div>
+              <p id="fileNameDisplay" class="text-xs font-bold text-slate-900">dataset.csv</p>
+              <p id="fileSizeDisplay" class="text-[11px] text-slate-500">0 KB</p>
+            </div>
+          </div>
+          <button onclick="removeSelectedFile()" class="text-slate-400 hover:text-rose-600 text-sm p-1 transition">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <!-- Process Button -->
+        <button id="bulkAnalyzeBtn" onclick="analyzeBulkFile()"
+          class="mt-6 w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-bold text-base shadow-lg shadow-teal-600/30 transition flex items-center justify-center gap-2">
+          <span id="bulkBtnText"><i class="fa-solid fa-magnifying-glass-chart"></i> Analyze Dataset</span>
+          <span id="bulkBtnSpinner" class="hidden"><i class="fa-solid fa-circle-notch fa-spin"></i> Processing Records...</span>
+        </button>
+      </div>
+
+      <!-- Bulk Results Display Section -->
+      <div id="bulkResultsContainer" class="hidden space-y-8">
+        
+        <!-- Metrics Summary KPI Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">Total Analyzed</span>
+            <div id="kpiTotal" class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">0</div>
+            <span class="text-[11px] text-slate-500 mt-0.5 block">Customer reviews</span>
+          </div>
+          <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+            <span class="text-xs font-bold text-emerald-600 uppercase tracking-wider block">Positive Reviews</span>
+            <div id="kpiPositive" class="text-2xl sm:text-3xl font-extrabold text-emerald-600 mt-1">0%</div>
+            <span id="kpiPosCount" class="text-[11px] text-slate-500 mt-0.5 block">0 reviews</span>
+          </div>
+          <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+            <span class="text-xs font-bold text-rose-600 uppercase tracking-wider block">Negative Reviews</span>
+            <div id="kpiNegative" class="text-2xl sm:text-3xl font-extrabold text-rose-600 mt-1">0%</div>
+            <span id="kpiNegCount" class="text-[11px] text-slate-500 mt-0.5 block">0 reviews</span>
+          </div>
+          <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+            <span class="text-xs font-bold text-teal-600 uppercase tracking-wider block">Dominant Sentiment</span>
+            <div id="kpiDominant" class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">--</div>
+            <span class="text-[11px] text-slate-500 mt-0.5 block">Dataset polarity</span>
+          </div>
+        </div>
+
+        <!-- Visual Donut Chart & Action Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          <!-- Chart Visual Card -->
+          <div class="lg:col-span-5 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm text-center">
+            <h3 class="text-base font-bold text-slate-900 mb-4 flex items-center justify-center gap-2">
+              <i class="fa-solid fa-chart-pie text-teal-600"></i> Sentiment Distribution
+            </h3>
+            <div id="bulkGraphWrapper" class="flex justify-center items-center min-h-[300px]">
+              <img id="bulkGraphImg" src="" alt="Sentiment Chart" class="max-w-full rounded-2xl mx-auto shadow-sm" />
+            </div>
+
+            <!-- Dual Download Action Buttons -->
+            <div class="mt-6 pt-4 border-t border-slate-100">
+              <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-3">Export Enriched Dataset</span>
+              <div class="grid grid-cols-2 gap-3">
+                <button onclick="triggerDownload('csv')"
+                  class="py-3 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm shadow-md transition flex items-center justify-center gap-2">
+                  <i class="fa-solid fa-file-csv text-teal-400"></i> Download CSV
+                </button>
+                <button onclick="triggerDownload('tsv')"
+                  class="py-3 px-4 rounded-2xl bg-teal-800 hover:bg-teal-700 text-white font-bold text-xs sm:text-sm shadow-md transition flex items-center justify-center gap-2">
+                  <i class="fa-solid fa-table text-teal-300"></i> Download TSV
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Preview Table Card -->
+          <div class="lg:col-span-7 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                <i class="fa-solid fa-table-list text-teal-600"></i> Sample Review Predictions
+              </h3>
+              <span class="text-xs text-slate-400">First 10 records preview</span>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr class="border-b border-slate-200 text-slate-400 uppercase tracking-wider">
+                    <th class="py-2.5 px-3">#</th>
+                    <th class="py-2.5 px-3">Review Snippet</th>
+                    <th class="py-2.5 px-3">Sentiment</th>
+                    <th class="py-2.5 px-3 text-right">Confidence</th>
+                  </tr>
+                </thead>
+                <tbody id="previewTableBody" class="divide-y divide-slate-100 text-slate-700">
+                  <!-- Injected via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-400">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <p>Amazon Alexa Review Sentiment Analysis Engine</p>
+      <p>Supports CSV &bull; TSV &bull; Flask &bull; XGBoost &bull; Scikit-Learn</p>
+    </div>
+  </footer>
+
+  <!-- Notification Toast Container -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm"></div>
+
+  <!-- JavaScript Application Logic -->
+  <script>
+    // State
+    let selectedBulkFile = null;
+    let cachedCsvDownloadBase64 = null;
+    let cachedTsvDownloadBase64 = null;
+
+    // Character counter
+    const reviewTextArea = document.getElementById("singleReviewText");
+    const charCounter = document.getElementById("charCount");
+    reviewTextArea.addEventListener("input", () => {
+      charCounter.innerText = `${reviewTextArea.value.length} characters`;
+    });
+
+    // Tab Switching
+    function switchTab(tab) {
+      const singleTabSection = document.getElementById("singleTabSection");
+      const bulkTabSection = document.getElementById("bulkTabSection");
+      const tabSingleBtn = document.getElementById("tabSingleBtn");
+      const tabBulkBtn = document.getElementById("tabBulkBtn");
+
+      if (tab === 'single') {
+        singleTabSection.classList.remove("hidden");
+        bulkTabSection.classList.add("hidden");
+        tabSingleBtn.className = "flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-sm transition-all bg-teal-500 text-slate-950 shadow-md";
+        tabBulkBtn.className = "flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-sm transition-all text-slate-300 hover:text-white";
+      } else {
+        singleTabSection.classList.add("hidden");
+        bulkTabSection.classList.remove("hidden");
+        tabBulkBtn.className = "flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-sm transition-all bg-teal-500 text-slate-950 shadow-md";
+        tabSingleBtn.className = "flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-sm transition-all text-slate-300 hover:text-white";
+      }
+    }
+
+    // Helper: Toast alerts
+    function showToast(message, type = "error") {
+      const container = document.getElementById("toastContainer");
+      const toast = document.createElement("div");
+      const isError = type === "error";
+      toast.className = `p-4 rounded-2xl shadow-xl border text-sm font-semibold flex items-center gap-3 transition-all transform translate-y-4 ${
+        isError 
+          ? "bg-rose-50 border-rose-200 text-rose-800" 
+          : "bg-emerald-50 border-emerald-200 text-emerald-800"
+      }`;
+      toast.innerHTML = `
+        <i class="fa-solid ${isError ? 'fa-circle-exclamation text-rose-600' : 'fa-circle-check text-emerald-600'}"></i>
+        <span>${message}</span>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => toast.classList.remove("translate-y-4"), 10);
+      setTimeout(() => {
+        toast.classList.add("opacity-0", "translate-y-4");
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    // Fill sample review
+    function fillSample(text) {
+      reviewTextArea.value = text;
+      charCounter.innerText = `${text.length} characters`;
+      analyzeSingleReview();
+    }
+
+    function clearSingleInput() {
+      reviewTextArea.value = "";
+      charCounter.innerText = "0 characters";
+      document.getElementById("singleResultCard").classList.add("hidden");
+      document.getElementById("singleEmptyState").classList.remove("hidden");
+    }
+
+    // Single Review Prediction
+    function analyzeSingleReview() {
+      const text = reviewTextArea.value.trim();
+      if (!text) {
+        showToast("Please enter a customer review to analyze.");
+        return;
+      }
+
+      const btn = document.getElementById("singleAnalyzeBtn");
+      const btnText = document.getElementById("singleBtnText");
+      const btnSpinner = document.getElementById("singleBtnSpinner");
+
+      btn.disabled = true;
+      btnText.classList.add("hidden");
+      btnSpinner.classList.remove("hidden");
+
+      fetch("/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: text })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          showToast(data.error);
+          return;
+        }
+
+        renderSingleResult(data);
+      })
+      .catch(err => {
+        showToast("Error connecting to prediction server: " + err.message);
+      })
+      .finally(() => {
+        btn.disabled = false;
+        btnText.classList.remove("hidden");
+        btnSpinner.classList.add("hidden");
+      });
+    }
+
+    function renderSingleResult(data) {
+      document.getElementById("singleEmptyState").classList.add("hidden");
+      const resultCard = document.getElementById("singleResultCard");
+      resultCard.classList.remove("hidden");
+
+      const badge = document.getElementById("sentimentBadge");
+      const isPositive = data.sentiment === "Positive";
+
+      if (isPositive) {
+        badge.className = "px-4 py-2 rounded-2xl font-extrabold text-sm flex items-center gap-2 bg-emerald-100 text-emerald-800 border border-emerald-300";
+        badge.innerHTML = `<i class="fa-solid fa-face-smile text-emerald-600 text-lg"></i> POSITIVE (${data.confidence}%)`;
+      } else {
+        badge.className = "px-4 py-2 rounded-2xl font-extrabold text-sm flex items-center gap-2 bg-rose-100 text-rose-800 border border-rose-300";
+        badge.innerHTML = `<i class="fa-solid fa-face-frown text-rose-600 text-lg"></i> NEGATIVE (${data.confidence}%)`;
+      }
+
+      document.getElementById("confidencePercentage").innerText = `${data.confidence}%`;
+      document.getElementById("probPositiveBar").style.width = `${data.positive_score}%`;
+      document.getElementById("probNegativeBar").style.width = `${data.negative_score}%`;
+      document.getElementById("posScoreText").innerText = `${data.positive_score}%`;
+      document.getElementById("negScoreText").innerText = `${data.negative_score}%`;
+
+      // Stemmed Tokens
+      const tokensContainer = document.getElementById("tokensList");
+      tokensContainer.innerHTML = "";
+      if (data.processed_tokens && data.processed_tokens.length > 0) {
+        data.processed_tokens.forEach(tok => {
+          const span = document.createElement("span");
+          span.className = "px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-mono font-medium shadow-xs";
+          span.innerText = tok;
+          tokensContainer.appendChild(span);
+        });
+      } else {
+        tokensContainer.innerHTML = `<span class="text-xs text-slate-400 italic">No significant vocabulary tokens extracted.</span>`;
+      }
+    }
+
+    // Drag and Drop Handling for Bulk (CSV and TSV)
+    const dropZone = document.getElementById("dropZone");
+    const bulkFileInput = document.getElementById("bulkFileInput");
+
+    dropZone.addEventListener("click", () => bulkFileInput.click());
+
+    ['dragenter', 'dragover'].forEach(event => {
+      dropZone.addEventListener(event, (e) => {
+        e.preventDefault();
+        dropZone.classList.add("border-teal-500", "bg-teal-50/40");
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(event => {
+      dropZone.addEventListener(event, (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("border-teal-500", "bg-teal-50/40");
+      });
+    });
+
+    dropZone.addEventListener("drop", (e) => {
+      if (e.dataTransfer.files.length) {
+        handleFileSelected(e.dataTransfer.files);
+      }
+    });
+
+    function handleFileSelected(files) {
+      if (!files || files.length === 0) return;
+      const file = files[0];
+      const lower = file.name.toLowerCase();
+      if (!lower.endsWith(".csv") && !lower.endsWith(".tsv") && !lower.endsWith(".txt")) {
+        showToast("Please choose a valid .csv or .tsv file.");
+        return;
+      }
+
+      selectedBulkFile = file;
+      const isTsv = lower.endsWith(".tsv");
+      document.getElementById("fileNameDisplay").innerText = `${file.name} [${isTsv ? 'TSV' : 'CSV'}]`;
+      document.getElementById("fileSizeDisplay").innerText = `${(file.size / 1024).toFixed(1)} KB`;
+      document.getElementById("fileInfoBox").classList.remove("hidden");
+    }
+
+    function removeSelectedFile() {
+      selectedBulkFile = null;
+      bulkFileInput.value = "";
+      document.getElementById("fileInfoBox").classList.add("hidden");
+    }
+
+    // Bulk Prediction Execution (CSV and TSV)
+    function analyzeBulkFile() {
+      if (!selectedBulkFile) {
+        showToast("Please select or drop a CSV/TSV file first, or click 'Try Demo Dataset'.");
+        return;
+      }
+
+      const btn = document.getElementById("bulkAnalyzeBtn");
+      const btnText = document.getElementById("bulkBtnText");
+      const btnSpinner = document.getElementById("bulkBtnSpinner");
+
+      btn.disabled = true;
+      btnText.classList.add("hidden");
+      btnSpinner.classList.remove("hidden");
+
+      const formData = new FormData();
+      formData.append("file", selectedBulkFile);
+
+      fetch("/predict", {
+        method: "POST",
+        headers: { "Accept": "application/json" },
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          showToast(data.error);
+          return;
+        }
+
+        renderBulkResults(data);
+      })
+      .catch(err => {
+        showToast("Error processing file: " + err.message);
+      })
+      .finally(() => {
+        btn.disabled = false;
+        btnText.classList.remove("hidden");
+        btnSpinner.classList.add("hidden");
+      });
+    }
+
+    // Instant Demo Dataset run
+    function runDemoPrediction() {
+      const btn = document.getElementById("bulkAnalyzeBtn");
+      const btnText = document.getElementById("bulkBtnText");
+      const btnSpinner = document.getElementById("bulkBtnSpinner");
+
+      btn.disabled = true;
+      btnText.classList.add("hidden");
+      btnSpinner.classList.remove("hidden");
+
+      fetch("/demo-predict")
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          showToast(data.error);
+          return;
+        }
+        renderBulkResults(data);
+        showToast("Loaded demo TSV dataset successfully!", "success");
+      })
+      .catch(err => {
+        showToast("Error fetching demo: " + err.message);
+      })
+      .finally(() => {
+        btn.disabled = false;
+        btnText.classList.remove("hidden");
+        btnSpinner.classList.add("hidden");
+      });
+    }
+
+    function renderBulkResults(data) {
+      cachedCsvDownloadBase64 = data.csv_download;
+      cachedTsvDownloadBase64 = data.tsv_download;
+
+      document.getElementById("bulkResultsContainer").classList.remove("hidden");
+
+      // Metrics
+      const s = data.summary;
+      document.getElementById("kpiTotal").innerText = s.total;
+      document.getElementById("kpiPositive").innerText = `${s.positive_pct}%`;
+      document.getElementById("kpiPosCount").innerText = `${s.positive_count} reviews`;
+      document.getElementById("kpiNegative").innerText = `${s.negative_pct}%`;
+      document.getElementById("kpiNegCount").innerText = `${s.negative_count} reviews`;
+
+      const dominantEl = document.getElementById("kpiDominant");
+      if (s.positive_count >= s.negative_count) {
+        dominantEl.innerText = "Positive 😊";
+        dominantEl.className = "text-2xl sm:text-3xl font-extrabold text-emerald-600 mt-1";
+      } else {
+        dominantEl.innerText = "Negative 😞";
+        dominantEl.className = "text-2xl sm:text-3xl font-extrabold text-rose-600 mt-1";
+      }
+
+      // Graph
+      document.getElementById("bulkGraphImg").src = `data:image/png;base64,${data.graph}`;
+
+      // Table Preview
+      const tbody = document.getElementById("previewTableBody");
+      tbody.innerHTML = "";
+      data.preview.forEach(row => {
+        const tr = document.createElement("tr");
+        const isPos = row.sentiment === "Positive";
+        tr.className = "hover:bg-slate-50/80 transition";
+        tr.innerHTML = `
+          <td class="py-3 px-3 font-mono text-slate-400 font-bold">${row.id}</td>
+          <td class="py-3 px-3 max-w-xs text-slate-800 font-medium">${row.text}</td>
+          <td class="py-3 px-3">
+            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${
+              isPos ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-rose-100 text-rose-800 border border-rose-200'
+            }">
+              ${isPos ? '😊 Positive' : '😞 Negative'}
+            </span>
+          </td>
+          <td class="py-3 px-3 text-right font-mono font-bold ${isPos ? 'text-emerald-700' : 'text-rose-700'}">
+            ${row.confidence}%
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // Scroll smoothly to results
+      document.getElementById("bulkResultsContainer").scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Trigger Download in either CSV or TSV format
+    function triggerDownload(format) {
+      const isTsv = format === 'tsv';
+      const b64Data = isTsv ? cachedTsvDownloadBase64 : cachedCsvDownloadBase64;
+
+      if (!b64Data) {
+        showToast(`No ${format.toUpperCase()} predictions available to download.`);
+        return;
+      }
+
+      const byteCharacters = atob(b64Data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const mime = isTsv ? 'text/tab-separated-values;charset=utf-8;' : 'text/csv;charset=utf-8;';
+      const blob = new Blob([byteArray], { type: mime });
+
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.setAttribute("download", `Predictions_Analyzed.${isTsv ? 'tsv' : 'csv'}`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  </script>
+</body>
+
+</html>
